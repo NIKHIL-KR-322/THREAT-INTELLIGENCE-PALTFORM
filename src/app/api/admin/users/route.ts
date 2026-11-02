@@ -1,0 +1,10 @@
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import bcrypt from "bcryptjs";
+import { getMysqlPool } from "@/lib/db";
+import { getSession } from "@/lib/session";
+const userSchema=z.object({name:z.string().min(2).max(120),email:z.string().email(),password:z.string().min(10),role:z.enum(["ADMIN","ANALYST"])});
+async function isAdmin(){return (await getSession())?.role==="ADMIN";}
+export async function GET(){if(!(await isAdmin()))return NextResponse.json({error:"Administrator access required."},{status:403});try{const [rows]=await getMysqlPool().query("SELECT id,name,email,role,is_active,created_at FROM users ORDER BY created_at");return NextResponse.json(rows);}catch(e){return NextResponse.json({error:e instanceof Error?e.message:"Database unavailable"},{status:503});}}
+export async function POST(req:Request){if(!(await isAdmin()))return NextResponse.json({error:"Administrator access required."},{status:403});try{const d=userSchema.parse(await req.json());const hash=await bcrypt.hash(d.password,12);const [r]=await getMysqlPool().execute("INSERT INTO users(name,email,password_hash,role) VALUES(?,?,?,?)",[d.name,d.email.toLowerCase(),hash,d.role]);return NextResponse.json({id:(r as {insertId:number}).insertId,name:d.name,email:d.email,role:d.role},{status:201});}catch(e){return NextResponse.json({error:e instanceof Error?e.message:"Could not create user."},{status:400});}}
+export async function PATCH(req:Request){if(!(await isAdmin()))return NextResponse.json({error:"Administrator access required."},{status:403});try{const d=z.object({id:z.number().int().positive(),role:z.enum(["ADMIN","ANALYST"]).optional(),is_active:z.boolean().optional()}).parse(await req.json());if(d.role)await getMysqlPool().execute("UPDATE users SET role=? WHERE id=?",[d.role,d.id]);if(d.is_active!==undefined)await getMysqlPool().execute("UPDATE users SET is_active=? WHERE id=?",[d.is_active,d.id]);return NextResponse.json({ok:true});}catch(e){return NextResponse.json({error:e instanceof Error?e.message:"Could not update user."},{status:400});}}

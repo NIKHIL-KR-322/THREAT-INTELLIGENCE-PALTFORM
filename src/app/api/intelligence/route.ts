@@ -1,0 +1,3 @@
+import { NextResponse } from "next/server";
+import { getMongoDb } from "@/lib/db";
+export async function GET(req:Request){try{const db=await getMongoDb();const url=new URL(req.url);const term=url.searchParams.get("q")?.trim();const filter=term?{$text:{$search:term}}:{};const reports=await db.collection("threat_reports").find(filter).sort({published_at:-1}).limit(100).toArray();const indicators=await db.collection("threat_indicators").find({}).limit(100).toArray();return NextResponse.json({reports,indicators});}catch(e){return NextResponse.json({error:e instanceof Error?e.message:"MongoDB unavailable"},{status:503});}}

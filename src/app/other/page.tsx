@@ -1,0 +1,1 @@
+export default function Other(){return <main className="simple-page"><a className="back" href="/">← Dashboard</a><p className="eyebrow">PLATFORM MODULE</p><h1>Coming online</h1><p className="subheading">This module is part of the project plan; database-backed workflow implementation is in progress.</p></main>}

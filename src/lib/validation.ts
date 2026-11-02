@@ -1,0 +1,3 @@
+import { z } from "zod";
+export const assetSchema = z.object({ asset_name: z.string().min(2).max(120), asset_type: z.enum(["Web Server", "Database Server", "Workstation", "Network Device", "Application"]), ip_address: z.string().ip(), criticality: z.enum(["Critical", "High", "Medium", "Low"]), operating_system: z.string().max(120).optional(), description: z.string().max(1000).optional() });
+export const vulnerabilitySchema = z.object({ cve_id: z.string().regex(/^CVE-\d{4}-\d{4,}$/i), vulnerability_name: z.string().min(2).max(180), severity: z.enum(["Critical", "High", "Medium", "Low"]), description: z.string().min(4), published_date: z.string().optional() });

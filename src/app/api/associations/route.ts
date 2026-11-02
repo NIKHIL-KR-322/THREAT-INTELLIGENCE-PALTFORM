@@ -1,0 +1,7 @@
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { getMysqlPool } from "@/lib/db";
+import { getSession } from "@/lib/session";
+const schema=z.object({asset_id:z.coerce.number().int().positive(),vulnerability_id:z.coerce.number().int().positive(),association_status:z.enum(["Unverified","Suspected","Confirmed","Not Affected"]),notes:z.string().max(1000).optional()});
+export async function GET(){try{const [rows]=await getMysqlPool().query("SELECT av.*,a.asset_name,v.cve_id,v.vulnerability_name,v.severity FROM asset_vulnerabilities av JOIN assets a ON a.id=av.asset_id JOIN vulnerabilities v ON v.id=av.vulnerability_id ORDER BY av.created_at DESC");return NextResponse.json(rows);}catch(e){return NextResponse.json({error:e instanceof Error?e.message:"Database unavailable"},{status:503});}}
+export async function POST(req:Request){try{if(!(await getSession()))return NextResponse.json({error:"Please sign in first."},{status:401});const d=schema.parse(await req.json());await getMysqlPool().execute("INSERT INTO asset_vulnerabilities(asset_id,vulnerability_id,association_status,notes) VALUES(?,?,?,?) ON DUPLICATE KEY UPDATE association_status=VALUES(association_status),notes=VALUES(notes)",[d.asset_id,d.vulnerability_id,d.association_status,d.notes||null]);return NextResponse.json({ok:true},{status:201});}catch(e){return NextResponse.json({error:e instanceof Error?e.message:"Could not save the link."},{status:400});}}
